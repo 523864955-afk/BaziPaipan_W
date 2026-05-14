@@ -453,32 +453,21 @@ select{
 </div>
 
 <script>
+// 异步加载 lunar-javascript，加载完成后再初始化页面
+let _Solar = null;
+function waitForLunar(cb) {
+  import('https://esm.sh/lunar-javascript@1.7.7').then(function(mod) {
+    _Solar = mod.Solar;
+    cb();
+  }).catch(function() {
+    // CDN 加载失败时使用降级模式（农历显示不可用，八字排盘仍正常）
+    cb();
+  });
+}
+
 /* ============================================
-   utils/lunar.js — 公历农历互转 + 24节气
+   utils/lunar.js — 公历农历互转
    ============================================ */
-const lunarInfo = [
-  0x04AE53,0x0A5748,0x5526BD,0x0D2650,0x0D9544,0x46AAB9,0x056A4D,0x09AD42,0x24AEB6,0x04AE4A,
-  0x6A4DBE,0x0A4D52,0x0D2546,0x5D52BA,0x0B544E,0x0D6A43,0x296D37,0x095B4B,0x749BC1,0x049754,
-  0x0A4B48,0x5B25BC,0x06A550,0x06D445,0x4ADAB8,0x02B64D,0x095742,0x2497B7,0x04974A,0x664B3E,
-  0x0D4A51,0x0EA546,0x56D4BA,0x05AD4E,0x02B644,0x393738,0x092E4B,0x7C96BF,0x0C9553,0x0D4A48,
-  0x6DA53B,0x0B554F,0x056A45,0x4AADB9,0x025D4D,0x092D42,0x2C95B6,0x0A954A,0x7B4ABD,0x06CA51,
-  0x0B5546,0x555ABB,0x04DA4E,0x0A5B43,0x352BB8,0x052B4C,0x8A953F,0x0E9552,0x06AA48,0x6AD53C,
-  0x0AB54F,0x04B645,0x4A5739,0x0A574D,0x052642,0x3E9335,0x0D9549,0x75AABE,0x056A51,0x096D46,
-  0x54AEBB,0x04AD4F,0x0A4D43,0x4D26B7,0x0D254B,0x8D52BF,0x0B5452,0x0B6A47,0x696D3C,0x095B50,
-  0x049B45,0x4A4BB9,0x0A4B4D,0xAB25C2,0x06A554,0x06D449,0x6ADA3D,0x0AB651,0x093746,0x5497BB,
-  0x04974F,0x064B44,0x36A537,0x0EA54A,0x86B2BF,0x05AC53,0x0AB647,0x5936BC,0x092E50,0x0C9645,
-  0x4D4AB8,0x0D4A4C,0x0DA541,0x25AAB6,0x056A49,0x7AADBD,0x025D52,0x092D47,0x5C95BA,0x0A954E,
-  0x0B4A43,0x4B5537,0x0AD54A,0x955ABF,0x04BA53,0x0A5B48,0x652BBC,0x052B50,0x0A9345,0x474AB9,
-  0x06AA4C,0x0AD541,0x24DAB6,0x04B64A,0x69573D,0x0A4E51,0x0D2646,0x5E933A,0x0D534D,0x05AA43,
-  0x36B537,0x096D4B,0xB4AEBF,0x04AD53,0x0A4D48,0x6D25BC,0x0D254F,0x0D5244,0x5DAA38,0x0B5A4C,
-  0x056D41,0x46ADB6,0x095B4A,0x8453BF,0x049752,0x064B47,0x66A53B,0x0EA54F,0x06B244,0x4AB638,
-  0x0AAE4C,0x092E42,0x3C9735,0x0C9649,0x7D4ABD,0x0D4A51,0x0DA545,0x55AABA,0x056A4E,0x0A6D43,
-  0x452EB7,0x052D4B,0x8A95BF,0x0A9553,0x0B4A47,0x6B553B,0x0AD54F,0x055A45,0x4A5D38,0x0A5B4C,
-  0x052B42,0x3A93B6,0x069349,0x7729BD,0x06AA51,0x0AD546,0x54DA3A,0x04B64E,0x0A5743,0x452738,
-  0x0D264A,0xD953BF,0x0D5252,0x0DAA47,0x66B53B,0x056D4F,0x04AE45,0x4A4EB9,0x0A4D4C,0x0D1541,
-  0x2D92B5,0x0D5249,0x0DAA3D,0x36B551,0x056D46,0x899DBA,0x049B4E,0x0A4B43,0x4AB537,0x0AA54A,
-  0x0B6A3E
-];
 const GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 const ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 const lunarMonthNames = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
@@ -486,34 +475,38 @@ const lunarDayNames = ['初一','初二','初三','初四','初五','初六','�
 const Animals = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
 
 function solarDays(y,m){if(m===2)return((y%4===0&&y%100!==0)||y%400===0)?29:28;return[31,28,31,30,31,30,31,31,30,31,30,31][m-1]}
-function lunarYearDays(y){let i,s=348,idx=y-1900;for(i=0x8000;i>0x8;i>>=1)s+=((lunarInfo[idx]&i)?1:0);return s+leapDays(y)}
-function leapDays(y){if(leapMonth(y))return(lunarInfo[y-1900]&0x10000)?30:29;return 0}
-function leapMonth(y){return lunarInfo[y-1900]&0xf}
-function lunarMonthDays(y,m){return(lunarInfo[y-1900]&(0x10000>>m))?30:29}
 
-function solarToLunar(y,m,d){
-  let i,leap=0,temp=0;
-  const baseDate=new Date(1900,0,31),objDate=new Date(y,m-1,d);
-  let offset=Math.round((objDate-baseDate)/86400000);
-  let lunarYear,lunarMonth,lunarDay,isLeap=false;
-  for(i=1900;i<2101&&offset>0;i++){temp=lunarYearDays(i);offset-=temp}
-  if(offset<0){offset+=temp;i--}
-  lunarYear=i;
-  const leapM=leapMonth(i);
-  let isLeapYear=false;
-  for(i=1;i<13&&offset>0;i++){
-    if(leapM>0&&i===leapM+1&&!isLeapYear){--i;isLeapYear=true;temp=leapDays(lunarYear)}
-    else{temp=lunarMonthDays(lunarYear,i)}
-    if(isLeapYear&&i===leapM+1)isLeapYear=false;
-    offset-=temp;
+function solarToLunar(y, m, d) {
+  // lunar-javascript 中，闰月用负数月份表示（如闰二月 = getMonth() 返回 -2）
+  if (_Solar) {
+    try {
+      const solar = _Solar.fromYmd(y, m, d);
+      const lunar = solar.getLunar();
+      const lunarYear = lunar.getYear();
+      const lunarMonthRaw = lunar.getMonth();
+      const lunarDay = lunar.getDay();
+      const isLeap = lunarMonthRaw < 0;
+      const lunarMonth = Math.abs(lunarMonthRaw);
+      const ganIdx = ((lunarYear - 4) % 10 + 10) % 10;
+      const zhiIdx = ((lunarYear - 4) % 12 + 12) % 12;
+      return {
+        lunarYear, lunarMonth, lunarDay, isLeap,
+        yearGanZhi: GAN[ganIdx] + ZHI[zhiIdx],
+        animal: Animals[zhiIdx],
+        lunarMonthName: (isLeap ? '闰' : '') + lunarMonthNames[lunarMonth - 1] + '月',
+        lunarDayName: lunarDayNames[lunarDay - 1]
+      };
+    } catch(e) { /* fallthrough */ }
   }
-  if(offset===0&&leapM>0&&i===leapM+1){if(isLeapYear)isLeapYear=false;else{isLeapYear=true;--i}}
-  if(offset<0){offset+=temp;--i}
-  lunarMonth=i;lunarDay=offset+1;isLeap=isLeapYear;
-  const ganIdx=(lunarYear-4)%10,zhiIdx=(lunarYear-4)%12;
-  const yearGanZhi=GAN[(ganIdx+10)%10]+ZHI[(zhiIdx+12)%12];
-  const animal=Animals[(lunarYear-4)%12];
-  return{lunarYear,lunarMonth,lunarDay,isLeap,yearGanZhi,animal,lunarMonthName:(isLeap?'闰':'')+lunarMonthNames[lunarMonth-1]+'月',lunarDayName:lunarDayNames[lunarDay-1]}
+  // 降级：无农历信息时返回干支年份（通过节气推算）
+  const ganIdx = ((y - 4) % 10 + 10) % 10;
+  const zhiIdx = ((y - 4) % 12 + 12) % 12;
+  return {
+    lunarYear: y, lunarMonth: 1, lunarDay: 1, isLeap: false,
+    yearGanZhi: GAN[ganIdx] + ZHI[zhiIdx],
+    animal: Animals[zhiIdx],
+    lunarMonthName: '（农历加载中）', lunarDayName: ''
+  };
 }
 
 /* 精确节气查表（lunar-javascript天文算法生成）
@@ -668,8 +661,9 @@ function genMonthFortune(year,month,baziResult){
   const careerDetail=pickTemplate(TEMPLATES.career[careerStar],seed),wealthDetail=pickTemplate(TEMPLATES.wealth[wealthStar],seed+1),loveDetail=pickTemplate(TEMPLATES.love[loveStar],seed+2),healthDetail=pickTemplate(TEMPLATES.health[healthStar],seed+3);
   const luckType=totalStars>=14?'help':totalStars>=10?'neutral':'harm';
   const harmType=luckType;
-  const yiItems=[...YI_LIST[luckType]].sort(()=>(seed%3)-1).slice(0,3);
-  const jiItems=[...JI_LIST[harmType]].sort(()=>(seed%2)-0.5).slice(0,3);
+  function seededPick(arr,s,n){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=((s*1103515245+12345)&0x7fffffff)%(i+1);[a[i],a[j]]=[a[j],a[i]];s=j+i*31;}return a.slice(0,n);}
+  const yiItems=seededPick(YI_LIST[luckType],seed,3);
+  const jiItems=seededPick(JI_LIST[harmType],seed+7,3);
   const avgStar=Math.round(totalStars/4);
   const remindList=REMIND_LIST[avgStar]||REMIND_LIST[3];
   const remind=remindList[seed%remindList.length];
@@ -724,7 +718,8 @@ function populateSelects() {
   const daySel = document.getElementById('inp-day');
   const hourSel = document.getElementById('inp-hour');
 
-  for (let y = 1900; y <= 2026; y++) {
+  const curYear = new Date().getFullYear();
+  for (let y = 1900; y <= curYear; y++) {
     const opt = document.createElement('option');
     opt.value = y; opt.textContent = y + '年';
     yearSel.appendChild(opt);
@@ -820,7 +815,7 @@ function doSubmit() {
   const d = parseInt(document.getElementById('inp-day').value);
   const hour = document.getElementById('inp-hour').value;
 
-  if (!y || y < 1900 || y > 2026) { showToast('请选择年份'); return; }
+  if (!y || y < 1900 || y > new Date().getFullYear()) { showToast('请选择年份'); return; }
   if (!m) { showToast('请选择月份'); return; }
   if (!d) { showToast('请选择日期'); return; }
   if (!hour) { showToast('请选择时辰'); return; }
@@ -972,13 +967,13 @@ function renderFortunePage() {
     html += '<div class="month-card-body">';
 
     // Career
-    html += buildFortuneCat('💼', '事业运', mf.careerStar, mf.careerTip, mf.careerDetail);
+    html += buildFortuneCat('事业', '事业运', mf.careerStar, mf.careerTip, mf.careerDetail);
     // Wealth
-    html += buildFortuneCat('💰', '财运', mf.wealthStar, mf.wealthTip, mf.wealthDetail);
+    html += buildFortuneCat('财运', '财运', mf.wealthStar, mf.wealthTip, mf.wealthDetail);
     // Love
-    html += buildFortuneCat('❤️', '感情运', mf.loveStar, mf.loveTip, mf.loveDetail);
+    html += buildFortuneCat('感情', '感情运', mf.loveStar, mf.loveTip, mf.loveDetail);
     // Health
-    html += buildFortuneCat('🏥', '健康运', mf.healthStar, mf.healthTip, mf.healthDetail);
+    html += buildFortuneCat('健康', '健康运', mf.healthStar, mf.healthTip, mf.healthDetail);
 
     // Extra
     html += '<div class="fortune-extra">';
@@ -987,7 +982,7 @@ function renderFortunePage() {
 
     // Remind
     html += '<div class="fortune-remind">';
-    html += '<div class="fortune-remind-label">💡 本月提醒</div>';
+    html += '<div class="fortune-remind-label">本月提醒</div>';
     html += '<div class="fortune-remind-text">' + mf.remind + '</div>';
     html += '</div>';
 
@@ -1273,11 +1268,11 @@ function showGuiRenDetail(r) {
   openModal('贵人详解', html);
 }
 
-// Init on DOMContentLoaded
+// 等待 lunar-javascript CDN 加载完成后再初始化
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', function() { waitForLunar(init); });
 } else {
-  init();
+  waitForLunar(init);
 }
 </script>
 </body>
