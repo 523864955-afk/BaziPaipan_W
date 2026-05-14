@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>八字排盘 · 运势</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-deep:#0a0e27;--bg-card:#131a3a;--bg-card2:#1a2340;
+  --gold:#d4a853;--gold-light:#f0d78c;--gold-dark:#b8860b;
+  --text:#e8e0d0;--text-dim:#8890a8;--text-dark:#555a70;
+  --red:#e74c3c;--green:#2ecc71;--blue:#3498db;
+  --border:rgba(212,168,83,0.2);--shadow:0 4px 20px rgba(0,0,0,0.4);
+  --radius:12px;--radius-sm:8px;
+  font-size:16px;
+}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  background:linear-gradient(135deg,#0a0e27 0%,#1a1a4e 50%,#0d1230 100%);
+  color:var(--text);line-height:1.6;
+  display:flex;justify-content:center;align-items:flex-start;
+}
+#app{
+  width:100%;max-width:600px;height:100vh;overflow-y:auto;
+  position:relative;
+  background:linear-gradient(180deg,#0c1233 0%,#111740 30%,#0e1438 100%);
+}
+@media(min-width:768px){
+  html,body{overflow:auto;height:auto}
+  body{
+    align-items:center;
+    padding:20px 0;
+  }
+  #app{
+    height:auto;min-height:calc(100vh - 40px);
+    border-radius:20px;
+    box-shadow:0 0 60px rgba(212,168,83,0.1),0 0 120px rgba(0,0,0,0.5);
+    border:1px solid var(--border);
+    overflow-y:visible;
+  }
+}
+/* Toast */
+#toast{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);
+  background:rgba(0,0,0,0.85);color:var(--text);padding:16px 32px;
+  border-radius:var(--radius);font-size:0.875rem;z-index:9999;
+  opacity:0;transition:all .3s ease;pointer-events:none;text-align:center;
+  max-width:80%;
+}
+#toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+/* Pages */
+.page{display:none;padding:20px;min-height:100vh;padding-bottom:40px}
+.page.active{display:block}
+/* Header */
+.header{text-align:center;padding:30px 0 20px}
+.header h1{font-size:1.75rem;color:var(--gold);font-weight:700;letter-spacing:2px}
+.header p{color:var(--text-dim);font-size:0.85rem;margin-top:4px}
+/* Back button */
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  color:var(--gold);font-size:0.875rem;cursor:pointer;
+  padding:8px 0;margin-bottom:10px;border:none;background:none;
+  opacity:0.8;transition:opacity .2s;
+}
+.back-btn:hover{opacity:1}
+.back-btn svg{width:18px;height:18px}
+/* Form */
+.form-section{
+  background:var(--bg-card);border-radius:var(--radius);
+  padding:24px 20px;margin-top:16px;border:1px solid var(--border);
+}
+.form-group{margin-bottom:18px}
+.form-group label{
+  display:block;font-size:0.8rem;color:var(--text-dim);
+  margin-bottom:6px;letter-spacing:1px;
+}
+.form-row{display:flex;gap:10px}
+.form-row .form-group{flex:1}
+input[type="text"],input[type="number"],select{
+  width:100%;padding:10px 14px;background:var(--bg-card2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-size:0.95rem;outline:none;
+  transition:border-color .2s;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,select:focus{border-color:var(--gold)}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23d4a853'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+  padding-right:32px;cursor:pointer;
+}
+.gender-selector{display:flex;gap:10px}
+.gender-btn{
+  flex:1;padding:10px;text-align:center;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-card2);
+  color:var(--text-dim);cursor:pointer;transition:all .2s;font-size:0.9rem;
+}
+.gender-btn.active{
+  border-color:var(--gold);color:var(--gold);
+  background:rgba(212,168,83,0.1);
+}
+.submit-btn{
+  width:100%;padding:14px;margin-top:6px;
+  background:linear-gradient(135deg,var(--gold-dark),var(--gold),var(--gold-light));
+  border:none;border-radius:var(--radius-sm);color:#1a1a2e;
+  font-size:1rem;font-weight:700;letter-spacing:2px;cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 15px rgba(212,168,83,0.3);
+}
+.submit-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,168,83,0.4)}
+.submit-btn:active{transform:translateY(0)}
+/* Bazi Chart */
+.bazi-card{
+  background:var(--bg-card);border-radius:var(--radius);
+  padding:20px;margin-bottom:16px;border:1px solid var(--border);
+}
+.bazi-card-title{
+  font-size:0.8rem;color:var(--text-dim);letter-spacing:1px;
+  margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+.pillars-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  text-align:center;
+}
+.pillar{background:var(--bg-card2);border-radius:var(--radius-sm);padding:10px 4px}
+.pillar-label{font-size:0.7rem;color:var(--text-dark);margin-bottom:6px}
+.pillar-gan{
+  font-size:1.2rem;font-weight:700;color:var(--gold);
+  margin-bottom:4px;
+}
+.pillar-zhi{font-size:1.2rem;font-weight:700;color:var(--text)}
+.pillar-shen{font-size:0.65rem;color:var(--text-dim);margin-top:4px}
+.pillar-wx{font-size:0.65rem;color:var(--text-dark);margin-top:2px}
+/* Wuxing bars */
+.wuxing-section{margin-top:8px}
+.wx-bar-row{display:flex;align-items:center;margin-bottom:6px;gap:8px}
+.wx-bar-label{width:24px;font-size:0.8rem;text-align:right}
+.wx-bar-track{flex:1;height:6px;background:var(--bg-card2);border-radius:3px;overflow:hidden}
+.wx-bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.wx-bar-fill.wood{background:#2ecc71}
+.wx-bar-fill.fire{background:#e74c3c}
+.wx-bar-fill.earth{background:#d4a853}
+.wx-bar-fill.metal{background:#bdc3c7}
+.wx-bar-fill.water{background:#3498db}
+.wx-bar-count{width:16px;font-size:0.7rem;color:var(--text-dim);text-align:right}
+/* Info rows */
+.info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid rgba(212,168,83,0.08);
+}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:0.85rem;color:var(--text-dim)}
+.info-value{font-size:0.85rem;color:var(--text);font-weight:500}
+.info-value.gold{color:var(--gold)}
+.info-value.red{color:var(--red)}
+.info-value.green{color:var(--green)}
+/* Guiren list */
+.guiren-item{
+  padding:10px 0;border-bottom:1px solid rgba(212,168,83,0.08);
+}
+.guiren-item:last-child{border-bottom:none}
+.guiren-name{font-size:0.85rem;color:var(--gold);font-weight:500;margin-bottom:2px}
+.guiren-desc{font-size:0.75rem;color:var(--text-dim)}
+/* Year nav */
+.year-nav{
+  display:flex;justify-content:center;align-items:center;gap:20px;
+  padding:12px 0;margin-bottom:8px;
+}
+.year-nav-btn{
+  background:var(--bg-card);border:1px solid var(--border);
+  color:var(--gold);width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:1rem;transition:all .2s;
+}
+.year-nav-btn:hover{background:rgba(212,168,83,0.15)}
+.year-nav-label{font-size:1.1rem;color:var(--gold);font-weight:600}
+/* Month fortune cards */
+.month-card{
+  background:var(--bg-card);border-radius:var(--radius);
+  margin-bottom:12px;border:1px solid var(--border);overflow:hidden;
+  cursor:pointer;transition:all .2s;
+}
+.month-card:active{transform:scale(0.99)}
+.month-card-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;
+}
+.month-card-left{display:flex;align-items:center;gap:10px}
+.month-card-month{
+  font-size:0.9rem;color:var(--text);font-weight:600;min-width:40px;
+}
+.month-card-ganzhi{font-size:0.75rem;color:var(--text-dim)}
+.luck-badge{
+  padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:600;
+}
+.luck-badge.great-good{background:rgba(46,204,113,0.15);color:#2ecc71}
+.luck-badge.good{background:rgba(52,152,219,0.15);color:#3498db}
+.luck-badge.normal{background:rgba(212,168,83,0.15);color:#d4a853}
+.luck-badge.bad{background:rgba(231,76,60,0.15);color:#e74c3c}
+.luck-badge.great-bad{background:rgba(155,89,182,0.15);color:#9b59b6}
+.month-card-arrow{
+  color:var(--text-dark);transition:transform .2s;font-size:0.8rem;
+}
+.month-card.expanded .month-card-arrow{transform:rotate(90deg)}
+.month-card-body{
+  display:none;padding:0 16px 14px;border-top:1px solid var(--border);
+}
+.month-card.expanded .month-card-body{display:block}
+.fortune-category{padding:12px 0;border-bottom:1px solid rgba(212,168,83,0.06)}
+.fortune-category:last-child{border-bottom:none}
+.fortune-cat-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:6px;
+}
+.fortune-cat-icon{font-size:0.9rem;margin-right:6px}
+.fortune-cat-name{font-size:0.8rem;color:var(--text-dim)}
+.fortune-cat-stars{font-size:0.75rem;color:var(--gold)}
+.fortune-cat-tip{font-size:0.8rem;color:var(--text);font-weight:500;margin-bottom:6px}
+.fortune-cat-detail{font-size:0.75rem;color:var(--text-dim);line-height:1.8}
+.fortune-extra{
+  margin-top:10px;padding-top:10px;border-top:1px solid rgba(212,168,83,0.08);
+  font-size:0.75rem;color:var(--text-dim);line-height:1.8;
+}
+.fortune-remind{
+  background:rgba(212,168,83,0.06);border-radius:var(--radius-sm);
+  padding:10px 12px;margin-top:8px;
+}
+.fortune-remind-label{font-size:0.7rem;color:var(--gold);margin-bottom:4px}
+.fortune-remind-text{font-size:0.75rem;color:var(--text-dim)}
+/* History */
+.history-section{margin-top:20px}
+.history-title{font-size:0.8rem;color:var(--text-dim);margin-bottom:10px;letter-spacing:1px}
+.history-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;background:var(--bg-card2);border-radius:var(--radius-sm);
+  margin-bottom:6px;cursor:pointer;transition:all .2s;
+}
+.history-item:hover{background:rgba(212,168,83,0.08)}
+.history-item-left{font-size:0.85rem;color:var(--text)}
+.history-item-delete{
+  font-size:0.75rem;color:var(--text-dark);cursor:pointer;
+  padding:4px 8px;border:none;background:none;
+}
+.history-item-delete:hover{color:var(--red)}
+/* Scrollbar */
+#app::-webkit-scrollbar{width:4px}
+#app::-webkit-scrollbar-track{background:transparent}
+#app::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:2px}
+/* Decorative */
+.deco-line{
+  width:40px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  margin:12px auto;
+}
+
+/* ===== Modal ===== */
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.75);z-index:10000;
+  display:flex;justify-content:center;align-items:center;
+  padding:16px;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s ease;
+}
+.modal-overlay.active{opacity:1;pointer-events:all}
+.modal-panel{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  width:100%;max-width:520px;
+  max-height:88vh;
+  display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6);
+  transform:translateY(20px);
+  transition:transform .25s ease;
+}
+.modal-overlay.active .modal-panel{transform:translateY(0)}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.modal-title{font-size:1rem;color:var(--gold);font-weight:700;letter-spacing:1px}
+.modal-close{
+  background:none;border:none;color:var(--text-dim);
+  font-size:1.4rem;cursor:pointer;line-height:1;padding:2px 6px;
+  transition:color .2s;
+}
+.modal-close:hover{color:var(--gold)}
+.modal-body{
+  padding:16px 20px;overflow-y:auto;flex:1;
+  font-size:0.85rem;line-height:1.8;color:var(--text);
+}
+.modal-body::-webkit-scrollbar{width:3px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:2px}
+.modal-section{margin-bottom:16px}
+.modal-section:last-child{margin-bottom:0}
+.modal-section-title{
+  font-size:0.75rem;color:var(--gold);letter-spacing:1px;
+  margin-bottom:6px;padding-bottom:4px;
+  border-bottom:1px solid rgba(212,168,83,0.15);
+}
+.modal-pillars-table{width:100%;border-collapse:collapse;margin-top:6px}
+.modal-pillars-table th,.modal-pillars-table td{
+  padding:5px 6px;text-align:center;font-size:0.78rem;
+  border:1px solid rgba(212,168,83,0.12);
+}
+.modal-pillars-table th{color:var(--text-dim);background:var(--bg-card2)}
+.modal-pillars-table td{color:var(--text)}
+.modal-wuxing-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.modal-wx-item{
+  background:var(--bg-card2);border-radius:var(--radius-sm);
+  padding:6px 4px;text-align:center;
+}
+.modal-wx-name{font-size:0.9rem;font-weight:700}
+.modal-wx-count{font-size:0.7rem;color:var(--text-dim)}
+.modal-wx-pct{font-size:0.65rem;color:var(--text-dark)}
+.modal-cycle{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.modal-chip{
+  background:rgba(212,168,83,0.1);border:1px solid rgba(212,168,83,0.2);
+  border-radius:20px;padding:3px 10px;font-size:0.72rem;color:var(--gold);
+}
+.modal-yongshen-box{
+  background:var(--bg-card2);border-radius:var(--radius-sm);
+  padding:10px 12px;margin-top:6px;
+}
+.modal-ys-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0}
+.modal-ys-label{font-size:0.78rem;color:var(--text-dim)}
+.modal-ys-value{font-size:0.85rem;font-weight:600}
+.modal-guiren-list{margin-top:6px}
+.modal-guiren-item{
+  background:var(--bg-card2);border-radius:var(--radius-sm);
+  padding:8px 12px;margin-bottom:6px;
+}
+.modal-guiren-item:last-child{margin-bottom:0}
+.modal-guiren-name{font-size:0.85rem;color:var(--gold);font-weight:600;margin-bottom:2px}
+.modal-guiren-desc{font-size:0.75rem;color:var(--text-dim)}
+.modal-tip-box{
+  background:rgba(212,168,83,0.06);border-radius:var(--radius-sm);
+  border-left:3px solid var(--gold);padding:8px 12px;margin-top:8px;
+}
+.modal-tip-label{font-size:0.7rem;color:var(--gold);margin-bottom:3px}
+.modal-tip-text{font-size:0.78rem;color:var(--text-dim);line-height:1.7}
+.modal-strong{color:#e74c3c !important}
+.modal-weak{color:#2ecc71 !important}
+.modal-gold-text{color:var(--gold) !important}
+/* bazi-card clickable */
+.bazi-card.clickable{cursor:pointer;transition:border-color .2s,box-shadow .2s;position:relative}
+.bazi-card.clickable:hover{border-color:rgba(212,168,83,0.5);box-shadow:0 0 12px rgba(212,168,83,0.08)}
+.bazi-card.clickable .card-arrow{position:absolute;top:14px;right:16px;display:flex;align-items:center;color:var(--gold);opacity:.5;transition:opacity .2s,transform .2s}
+.bazi-card.clickable .card-arrow svg{width:18px;height:18px}
+.bazi-card.clickable:hover .card-arrow{opacity:1;transform:translateX(3px)}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- PAGE: Home -->
+  <div id="page-home" class="page active">
+    <div class="header">
+      <h1>✦ 八字排盘 ✦</h1>
+      <div class="deco-line"></div>
+      <p>输入生辰，洞察命运</p>
+    </div>
+    <div class="form-section">
+      <div class="form-row">
+        <div class="form-group">
+          <label>出生年份</label>
+          <input type="number" id="inp-year" placeholder="例：1990" min="1901" max="2099">
+        </div>
+        <div class="form-group">
+          <label>月份</label>
+          <select id="inp-month">
+            <option value="" disabled selected>选择</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>日期</label>
+          <select id="inp-day">
+            <option value="" disabled selected>选择</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>时辰</label>
+          <select id="inp-hour">
+            <option value="" disabled selected>选择</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>性别</label>
+        <div class="gender-selector">
+          <div class="gender-btn active" data-gender="男" onclick="selectGender(this)">♂ 男</div>
+          <div class="gender-btn" data-gender="女" onclick="selectGender(this)">♀ 女</div>
+        </div>
+      </div>
+      <button class="submit-btn" onclick="doSubmit()">开始排盘</button>
+    </div>
+    <div class="history-section" id="history-section">
+      <div class="history-title">— 历史记录 —</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title"></div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: Bazi -->
+  <div id="page-bazi" class="page">
+    <button class="back-btn" onclick="navigateTo('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      返回
+    </button>
+    <div class="header">
+      <h1 id="bazi-title">八字排盘</h1>
+      <div class="deco-line"></div>
+    </div>
+    <div id="bazi-content"></div>
+    <button class="submit-btn" onclick="renderFortunePage();navigateTo('fortune')" style="margin-top:12px">查看运势 →</button>
+  </div>
+
+  <!-- PAGE: Fortune -->
+  <div id="page-fortune" class="page">
+    <button class="back-btn" onclick="navigateTo('bazi')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      返回排盘
+    </button>
+    <div class="header">
+      <h1>年度运势</h1>
+      <div class="deco-line"></div>
+    </div>
+    <div class="year-nav">
+      <div class="year-nav-btn" onclick="changeYear(-1)">◀</div>
+      <div class="year-nav-label" id="fortune-year-label"></div>
+      <div class="year-nav-btn" onclick="changeYear(1)">▶</div>
+    </div>
+    <div id="fortune-content"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================
+   utils/lunar.js — 公历农历互转 + 24节气
+   ============================================ */
+const lunarInfo = [
+  0x04AE53,0x0A5748,0x5526BD,0x0D2650,0x0D9544,0x46AAB9,0x056A4D,0x09AD42,0x24AEB6,0x04AE4A,
+  0x6A4DBE,0x0A4D52,0x0D2546,0x5D52BA,0x0B544E,0x0D6A43,0x296D37,0x095B4B,0x749BC1,0x049754,
+  0x0A4B48,0x5B25BC,0x06A550,0x06D445,0x4ADAB8,0x02B64D,0x095742,0x2497B7,0x04974A,0x664B3E,
+  0x0D4A51,0x0EA546,0x56D4BA,0x05AD4E,0x02B644,0x393738,0x092E4B,0x7C96BF,0x0C9553,0x0D4A48,
+  0x6DA53B,0x0B554F,0x056A45,0x4AADB9,0x025D4D,0x092D42,0x2C95B6,0x0A954A,0x7B4ABD,0x06CA51,
+  0x0B5546,0x555ABB,0x04DA4E,0x0A5B43,0x352BB8,0x052B4C,0x8A953F,0x0E9552,0x06AA48,0x6AD53C,
+  0x0AB54F,0x04B645,0x4A5739,0x0A574D,0x052642,0x3E9335,0x0D9549,0x75AABE,0x056A51,0x096D46,
+  0x54AEBB,0x04AD4F,0x0A4D43,0x4D26B7,0x0D254B,0x8D52BF,0x0B5452,0x0B6A47,0x696D3C,0x095B50,
+  0x049B45,0x4A4BB9,0x0A4B4D,0xAB25C2,0x06A554,0x06D449,0x6ADA3D,0x0AB651,0x093746,0x5497BB,
+  0x04974F,0x064B44,0x36A537,0x0EA54A,0x86B2BF,0x05AC53,0x0AB647,0x5936BC,0x092E50,0x0C9645,
+  0x4D4AB8,0x0D4A4C,0x0DA541,0x25AAB6,0x056A49,0x7AADBD,0x025D52,0x092D47,0x5C95BA,0x0A954E,
+  0x0B4A43,0x4B5537,0x0AD54A,0x955ABF,0x04BA53,0x0A5B48,0x652BBC,0x052B50,0x0A9345,0x474AB9,
+  0x06AA4C,0x0AD541,0x24DAB6,0x04B64A,0x69573D,0x0A4E51,0x0D2646,0x5E933A,0x0D534D,0x05AA43,
+  0x36B537,0x096D4B,0xB4AEBF,0x04AD53,0x0A4D48,0x6D25BC,0x0D254F,0x0D5244,0x5DAA38,0x0B5A4C,
+  0x056D41,0x46ADB6,0x095B4A,0x8453BF,0x049752,0x064B47,0x66A53B,0x0EA54F,0x06B244,0x4AB638,
+  0x0AAE4C,0x092E42,0x3C9735,0x0C9649,0x7D4ABD,0x0D4A51,0x0DA545,0x55AABA,0x056A4E,0x0A6D43,
+  0x452EB7,0x052D4B,0x8A95BF,0x0A9553,0x0B4A47,0x6B553B,0x0AD54F,0x055A45,0x4A5D38,0x0A5B4C,
+  0x052B42,0x3A93B6,0x069349,0x7729BD,0x06AA51,0x0AD546,0x54DA3A,0x04B64E,0x0A5743,0x452738,
+  0x0D264A,0xD953BF,0x0D5252,0x0DAA47,0x66B53B,0x056D4F,0x04AE45,0x4A4EB9,0x0A4D4C,0x0D1541,
+  0x2D92B5,0x0D5249,0x0DAA3D,0x36B551,0x056D46,0x899DBA,0x049B4E,0x0A4B43,0x4AB537,0x0AA54A,
+  0x0B6A3E
+];
+const sTermInfo = [0,21208,42467,63836,85337,107014,128867,150921,173149,195551,218072,240693,263343,285989,308563,331033,353350,375494,397447,419210,440795,462224,483532,504758];
+const GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const lunarMonthNames = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+const lunarDayNames = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+const Animals = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+
+function solarDays(y,m){if(m===2)return((y%4===0&&y%100!==0)||y%400===0)?29:28;return[31,28,31,30,31,30,31,31,30,31,30,31][m-1]}
+function lunarYearDays(y){let i,s=348,idx=y-1900;for(i=0x8000;i>0x8;i>>=1)s+=((lunarInfo[idx]&i)?1:0);return s+leapDays(y)}
+function leapDays(y){if(leapMonth(y))return(lunarInfo[y-1900]&0x10000)?30:29;return 0}
+function leapMonth(y){return lunarInfo[y-1900]&0xf}
+function lunarMonthDays(y,m){return(lunarInfo[y-1900]&(0x10000>>m))?30:29}
+
+function solarToLunar(y,m,d){
+  let i,leap=0,temp=0;
+  const baseDate=new Date(1900,0,31),objDate=new Date(y,m-1,d);
+  let offset=Math.round((objDate-baseDate)/86400000);
+  let lunarYear,lunarMonth,lunarDay,isLeap=false;
+  for(i=1900;i<2101&&offset>0;i++){temp=lunarYearDays(i);offset-=temp}
+  if(offset<0){offset+=temp;i--}
+  lunarYear=i;
+  const leapM=leapMonth(i),isLeapYear=false;
+  for(i=1;i<13&&offset>0;i++){
+    if(leapM>0&&i===leapM+1&&!isLeapYear){--i;isLeapYear=true;temp=leapDays(lunarYear)}
+    else{temp=lunarMonthDays(lunarYear,i)}
+    if(isLeapYear&&i===leapM+1)isLeapYear=false;
+    offset-=temp;
+  }
+  if(offset===0&&leapM>0&&i===leapM+1){if(isLeapYear)isLeapYear=false;else{isLeapYear=true;--i}}
+  if(offset<0){offset+=temp;--i}
+  lunarMonth=i;lunarDay=offset+1;isLeap=isLeapYear;
+  const ganIdx=(lunarYear-4)%10,zhiIdx=(lunarYear-4)%12;
+  const yearGanZhi=GAN[(ganIdx+10)%10]+ZHI[(zhiIdx+12)%12];
+  const animal=Animals[(zhiIdx+12)%12];
+  return{lunarYear,lunarMonth,lunarDay,isLeap,yearGanZhi,animal,lunarMonthName:(isLeap?'闰':'')+lunarMonthNames[lunarMonth-1]+'月',lunarDayName:lunarDayNames[lunarDay-1]}
+}
+
+function getSolarTerm(y,m){
+  const termDays=[[6,20],[4,19],[6,21],[5,20],[6,21],[6,21],[7,23],[7,23],[8,23],[8,23],[8,23],[7,22],[7,22]];
+  return{jie:termDays[m-1][0],qi:termDays[m-1][1]}
+}
+
+/* ============================================
+   utils/bazi.js — 八字计算
+   ============================================ */
+const GAN_WX=['木','木','火','火','土','土','金','金','水','水'];
+const ZHI_WX=['水','土','木','木','土','火','火','土','金','金','土','水'];
+const MONTH_GAN_START=[2,4,6,8,0];
+const TIME_GAN_START=[0,2,4,6,8];
+const HOUR_ZHI_MAP={'子时':0,'丑时':1,'寅时':2,'卯时':3,'辰时':4,'巳时':5,'午时':6,'未时':7,'申时':8,'酉时':9,'戌时':10,'亥时':11};
+const SHEN_MAP=[['比肩','劫财','食神','伤官','偏财','正财','七杀','正官','偏印','正印'],['劫财','比肩','伤官','食神','正财','偏财','正官','七杀','正印','偏印'],['偏印','正印','比肩','劫财','食神','伤官','偏财','正财','七杀','正官'],['正印','偏印','劫财','比肩','伤官','食神','正财','偏财','正官','七杀'],['七杀','正官','偏印','正印','比肩','劫财','食神','伤官','偏财','正财'],['正官','七杀','正印','偏印','劫财','比肩','伤官','食神','正财','偏财'],['偏财','正财','七杀','正官','偏印','正印','比肩','劫财','食神','伤官'],['正财','偏财','正官','七杀','正印','偏印','劫财','比肩','伤官','食神'],['食神','伤官','偏财','正财','七杀','正官','偏印','正印','比肩','劫财'],['伤官','食神','正财','偏财','正官','七杀','正印','偏印','劫财','比肩']];
+const TIANYI={'甲':['丑','未'],'戊':['丑','未'],'庚':['丑','未'],'乙':['子','申'],'己':['子','申'],'丙':['亥','酉'],'丁':['亥','酉'],'壬':['卯','巳'],'癸':['卯','巳'],'辛':['午','寅']};
+const TIANDE=['丁','申','壬','辛','亥','甲','癸','寅','丙','乙','巳','庚'];
+const YUEDE=['丙','甲','壬','庚','丙','甲','壬','庚','丙','甲','壬','庚'];
+
+function getDayGanZhi(y,m,d){
+  const base=new Date(1900,0,1),target=new Date(y,m-1,d);
+  const diff=Math.round((target-base)/86400000);
+  const idx=((diff%60)+60+46)%60;
+  return{gan:GAN[idx%10],zhi:ZHI[idx%12],ganIdx:idx%10,zhiIdx:idx%12,ganZhi:GAN[idx%10]+ZHI[idx%12]}
+}
+function getYearGanZhi(y,m,d){
+  let year=y;
+  const{jie}=getSolarTerm(y,2);
+  if(m<2||(m===2&&d<jie))year--;
+  const base=1924,offset=year-base;
+  const ganIdx=((offset%10)+10)%10,zhiIdx=((offset%12)+12)%12;
+  return{gan:GAN[ganIdx],zhi:ZHI[zhiIdx],ganIdx,zhiIdx,ganZhi:GAN[ganIdx]+ZHI[zhiIdx]}
+}
+function getMonthGanZhi(y,m,d){
+  const{jie}=getSolarTerm(y,m);
+  let adjM=m;if(d<jie)adjM=m-1;if(adjM<=0)adjM+=12;
+  const zhiIdx=(adjM+1)%12;
+  const yearGan=getYearGanZhi(y,m,d),yGanIdx=yearGan.ganIdx;
+  const monthGanBase=MONTH_GAN_START[yGanIdx%5];
+  const offset=(adjM-1+12)%12;
+  const ganIdx=(monthGanBase+offset)%10;
+  return{gan:GAN[ganIdx],zhi:ZHI[zhiIdx],ganIdx,zhiIdx,ganZhi:GAN[ganIdx]+ZHI[zhiIdx]}
+}
+function getTimeGanZhi(dayGanIdx,hourStr){
+  const zhiIdx=HOUR_ZHI_MAP[hourStr]||0;
+  const ganBase=TIME_GAN_START[dayGanIdx%5];
+  const ganIdx=(ganBase+zhiIdx)%10;
+  return{gan:GAN[ganIdx],zhi:ZHI[zhiIdx],ganIdx,zhiIdx,ganZhi:GAN[ganIdx]+ZHI[zhiIdx]}
+}
+function calcWuXing(pillars){
+  const count={木:0,火:0,土:0,金:0,水:0};
+  pillars.forEach(p=>{count[GAN_WX[p.ganIdx]]++;count[ZHI_WX[p.zhiIdx]]++});
+  return count
+}
+function calcYongShen(pillars,wuXing){
+  const dayGan=pillars[2],dayWx=GAN_WX[dayGan.ganIdx],monthZhiWx=ZHI_WX[pillars[1].zhiIdx];
+  const sheng={木:'水',火:'木',土:'火',金:'土',水:'金'};
+  let strength=0;
+  if(monthZhiWx===dayWx)strength+=2;
+  if(monthZhiWx===sheng[dayWx])strength+=1;
+  [pillars[0],pillars[3]].forEach(p=>{const gw=GAN_WX[p.ganIdx],zw=ZHI_WX[p.zhiIdx];if(gw===dayWx||zw===dayWx)strength++;if(gw===sheng[dayWx]||zw===sheng[dayWx])strength++});
+  const isStrong=strength>=3;
+  const ke={木:'金',火:'水',土:'木',金:'火',水:'土'};
+  const shengBy=sheng;
+  let yongWx,jiWx;
+  if(!isStrong){yongWx=[dayWx,shengBy[dayWx]];jiWx=[ke[dayWx]]}
+  else{yongWx=[ke[dayWx]];jiWx=[dayWx,shengBy[dayWx]]}
+  return{dayWx,isStrong,strengthLabel:isStrong?'偏强':'偏弱',yongWx,jiWx,yongLabel:yongWx.join('、'),jiLabel:jiWx.join('、')}
+}
+function calcShiShen(pillars){
+  const dayGanIdx=pillars[2].ganIdx;
+  return pillars.map((p,i)=>({label:['年干','月干','日干','时干'][i],gan:p.gan,zhi:p.zhi,ganShen:i===2?'日元':SHEN_MAP[dayGanIdx][p.ganIdx],zhiWx:ZHI_WX[p.zhiIdx]}))
+}
+function calcGuiRen(pillars){
+  const dayGan=pillars[2].gan,monthZhiIdx=pillars[1].zhiIdx,result=[];
+  const ty=TIANYI[dayGan]||[],allZhi=pillars.map(p=>p.zhi);
+  ty.forEach(z=>{if(allZhi.includes(z))result.push({name:'天乙贵人',desc:'命局含'+z+'，逢贵人扶助，遇难呈祥'})});
+  const tdGan=TIANDE[monthZhiIdx];if(pillars.map(p=>p.gan).includes(tdGan))result.push({name:'天德贵人',desc:'月令含天德，逢凶化吉，一生少灾祸'});
+  const ydGan=YUEDE[monthZhiIdx];if(pillars.map(p=>p.gan).includes(ydGan))result.push({name:'月德贵人',desc:'月令含月德，处世逢贵，有贵人相助'});
+  if(GAN_WX[pillars[2].ganIdx]==='土'){const taijiZhi=['子','午','卯','酉'],found=allZhi.filter(z=>taijiZhi.includes(z));if(found.length>0)result.push({name:'太极贵人',desc:'命含'+found.join('')+'，太极贵人临，智慧出众'})}
+  if(result.length===0)result.push({name:'无特定贵人',desc:'贵人多积累于后天，积德行善自有福报'});
+  return result
+}
+
+function calcBaZi(y,m,d,hourStr){
+  const yearPillar=getYearGanZhi(y,m,d),monthPillar=getMonthGanZhi(y,m,d),dayPillar=getDayGanZhi(y,m,d),timePillar=getTimeGanZhi(dayPillar.ganIdx,hourStr);
+  const pillars=[yearPillar,monthPillar,dayPillar,timePillar],wuXing=calcWuXing(pillars),yongShen=calcYongShen(pillars,wuXing),shiShen=calcShiShen(pillars),guiRen=calcGuiRen(pillars);
+  return{pillars,wuXing,yongShen,shiShen,guiRen,dayGan:dayPillar.gan,dayWx:GAN_WX[dayPillar.ganIdx]}
+}
+function getLiuNianGanZhi(year){
+  const base=1924,offset=year-base;
+  const ganIdx=((offset%10)+10)%10,zhiIdx=((offset%12)+12)%12;
+  return{gan:GAN[ganIdx],zhi:ZHI[zhiIdx],ganIdx,zhiIdx}
+}
+function getLiuYueGanZhi(year,month){
+  const yearGanZhi=getLiuNianGanZhi(year),yGanIdx=yearGanZhi.ganIdx;
+  const monthGanBase=MONTH_GAN_START[yGanIdx%5];
+  const mZhiIdx=(month+1)%12,offset2=(month-1+12)%12;
+  const ganIdx=(monthGanBase+offset2)%10;
+  return{gan:GAN[ganIdx],zhi:ZHI[mZhiIdx],ganIdx,zhiIdx:mZhiIdx}
+}
+
+/* ============================================
+   utils/fortune.js — 运势计算
+   ============================================ */
+const SHENG={木:'火',火:'土',土:'金',金:'水',水:'木'};
+const KE={木:'土',火:'金',土:'水',金:'木',水:'火'};
+const LIU_HE={'子':'丑','丑':'子','寅':'亥','亥':'寅','卯':'戌','戌':'卯','辰':'酉','酉':'辰','巳':'申','申':'巳','午':'未','未':'午'};
+const LIU_CHONG={'子':'午','午':'子','丑':'未','未':'丑','寅':'申','申':'寅','卯':'酉','酉':'卯','辰':'戌','戌':'辰','巳':'亥','亥':'巳'};
+
+const TEMPLATES={
+  career:{5:['本月事业运势极佳，贵人接连出现，在工作中表现出色，领导赏识有加。适合主动争取晋升机会，签订重要合同或开展新项目合作。职场风向对你极为有利，把握时机，大胆推进，有望迎来职业发展的重要突破。','本月职场运强劲，工作效率高涨，人际关系融洽，有望获得上级肯定或重要项目负责资格。适合拓展人脉、开展合作洽谈，主动表现者能收获超预期回报。'],4:['本月事业运平稳向好，工作中容易获得同事和上级的认可，适合推进长期项目，有新的合作契机出现。职场人际关系和谐，无明显口舌是非，脚踏实地，稳中有进。','本月工作运顺畅，思路清晰，执行力强。适合整理工作计划，推进已有项目，阶段性成果可期。'],3:['本月事业运平平，维持日常工作节奏即可，不宜急于求成或做重大职业变动。以稳为主，做好本职工作，保持良好职场关系，积累实力。','本月工作进展平稳，无特别大的机遇，也无明显阻碍。保持专注，做好手头工作，避免分心，等待更好时机。'],2:['本月事业运略有波折，工作中容易出现误解或摩擦，注意沟通方式，避免冲动表达。暂缓重大决策，以守为主，遇到阻力不必强行突破，待时机好转再发力。','本月职场有压力，工作任务繁重或遭遇阻力，注意情绪管理，保持冷静。避免和同事产生正面冲突，凡事多留余地。'],1:['本月事业运较为低迷，工作中容易遭遇挫折或误解，不宜做职业变动、签署重要合同或公开表态。以低调、守势为主，积蓄能量，静待转机，切忌冲动行事。','本月职场压力较大，可能面临批评或调整，心态务必平稳。适当退让，避免正面冲突，稳住当前局面，等待下月运势回暖。']},
+  wealth:{5:['本月财运极旺，正财偏财双双发动，有意外收获的机会。适合开展商务谈判、新业务拓展或合理投资，财富积累效率显著提升。留意身边的高质量财务机会，有望实现阶段性财务目标。','本月财运大开，收入来源多元，资金周转顺畅。适合落地合作项目、进行审慎投资或理财布局，收益可期。'],4:['正财收入平稳，符合预期，有小额偏财机会可把握，但需理性判断。整体资金状况良好，无重大破财风险，适合进行稳健理财或储蓄规划。','本月财务运转顺畅，收支平衡，节余稳健。可关注稳健型投资机会，避免激进操作，财富积少成多。'],3:['本月财运平稳，收入正常，无重大财务风险。不建议进行高风险投资，以稳健理财为主，控制日常开支，量入为出。','本月财务稳中偏平，正财稳定，偏财运一般。保持现有财务规划，避免大额非计划支出，理性消费。'],2:['本月财运略弱，容易有意外开支或财务摩擦，谨慎对待借贷、担保等财务行为。暂缓大额投资，避免冲动消费，守财为要，量入为出。','本月有破财隐患，注意财务细节，避免大意失误。远离高风险投机，管好钱包，以防小漏成患。'],1:['本月财运低迷，破财风险较高，严禁参与高风险投机活动，避免大额借贷或为他人担保。日常消费需精打细算，以守为主，财务决策务必谨慎，静待财运好转。','本月财务压力较大，可能出现较大支出或损失，严格控制预算，远离一切投机行为，保守应对，护好本金。']},
+  love:{5:['本月感情运极佳，单身者桃花盛开，有机会遇见心动对象，情缘来临需把握。已婚/恋爱中者情感深化，伴侣关系更加亲密，双方沟通顺畅，幸福感大幅提升，可考虑增进感情的重要安排。','本月桃花运旺盛，人际吸引力强，感情发展水到渠成。单身者不妨主动出击，已有伴侣者可趁机加深情感纽带，共创美好时光。'],4:['单身者人缘提升，有结识新朋友的机会；已婚/在恋者家庭关系和睦，沟通顺畅，感情氛围温馨。避免情绪化争吵，整体感情运舒适顺遂。','本月感情运稳中向好，与亲近之人互动愉快，心情舒畅。单身者可参与社交活动，扩大交友圈，缘分可期。'],3:['本月感情运平平，无特别大的起伏。维持现有感情关系，保持耐心和包容。单身者暂无明显桃花机遇，专注自我提升更为重要。','本月感情平稳，无大喜也无大忧。注重日常陪伴，避免将工作压力带入感情生活，相互理解即可。'],2:['本月感情运有波动，容易与伴侣发生误解或口角，注意言行，多倾听少争辩。单身者感情路途有阻，不宜强求，顺其自然。遇到感情摩擦时，冷静处理比冲动更有效。','本月感情有些微摩擦，可能因沟通不畅引发小争执。保持情绪稳定，避免在情绪激动时做出影响感情的决定。'],1:['本月感情运较为低迷，感情问题可能集中爆发，不宜在此时做出重要感情决定（如确立关系、求婚、分手）。单身者暂避感情纠纷，专注自我成长。已有伴侣者注意沟通方式，避免激化矛盾。','本月感情压力较大，可能面临误解或矛盾，耐心等待，保持克制，切勿冲动决断，给彼此留有空间和余地。']},
+  health:{5:['本月身体状态极佳，精力充沛，免疫力强，适合开展体能锻炼计划或体检调整。整体健康运极好，注意不要过度消耗体力，保持均衡作息，让好状态延续。','本月健康运顶峰，身心状态良好，精力旺盛。适合开始新的健身计划，增强体质，保持活力。'],4:['本月健康运良好，身体状态稳定，精力充沛。保持规律作息和适度运动，无重大健康隐患，注意预防季节性感冒等小病即可。','本月整体健康状况良好，无明显不适。维持现有的生活习惯，适当增加户外活动，心情舒畅有助于身体维持佳态。'],3:['本月健康运平平，需规律作息，避免熬夜。注意饮食均衡，少吃生冷辛辣，无重大健康问题，注重日常养生即可。','本月健康维持日常水平，无大碍，但需关注睡眠质量和饮食规律。避免过度劳累，保持情绪平稳，身体自然顺畅。'],2:['本月健康运略弱，需特别注意作息规律，防止过度劳累。容易出现疲惫或小毛病，应及时就医，避免拖延。减少高强度运动，保持轻松节奏，让身体充分休息。','本月身体状态偏弱，注意防寒保暖，避免着凉。不宜参加高强度体育运动，饮食以清淡为主，多补充水分。'],1:['本月健康运较差，身体易出现不适，需格外注意。避免劳累过度，一旦出现不适症状尽早就医，不可拖延。饮食规律、充足睡眠是当前最重要的调养方法，远离危险运动和不良嗜好。','本月健康需高度警惕，身体抵抗力偏弱，易受外邪侵扰。保暖防寒，饮食清淡，避免过度消耗，如有慢性病需定期复查。']}
+};
+
+const YI_LIST={help:['签约合作','洽谈商务','学习进修','规划布局','旅行出行','公益活动','婚嫁庆典','投资理财'],neutral:['日常工作','维护关系','稳步推进','阶段回顾','适当休息','家庭陪伴'],harm:['大额投资','冲动消费','草率决策','重大变动','争论是非','远行冒险']};
+const JI_LIST={help:['投机冒险','冲动争吵','轻率承诺','破坏规律'],neutral:['大起大落','急于求成','轻言放弃'],harm:['签订合同','重大投资','远行出游','婚嫁庆典','开业创业','冲动表态']};
+const REMIND_LIST={5:['贵人当前，把握机遇，大胆行动','运势顶峰，行动是最好的投资','一鼓作气，此时布局效益倍增'],4:['稳中有进，主动把握合作机会','守财为主，适合长线规划','顺势而为，重要事项可稳步推进'],3:['静心蓄力，等待时机成熟','平稳过渡，积累底蕴为上','保持耐心，当前宜守不宜攻'],2:['谨慎应对，遇事三思而后行','低调守势，避免无谓消耗','修身养性，减少对外摩擦'],1:['韬光养晦，蓄势待发','以静制动，避开正面冲突','内外兼修，静待时机好转']};
+
+function calcWxScore(wx,yongWx,jiWx){if(yongWx.includes(wx))return 2;if(jiWx.includes(wx))return -2;const shengOf={木:'水',火:'木',土:'火',金:'土',水:'金'};if(yongWx.includes(SHENG[wx]))return 1;if(jiWx.includes(KE[wx]))return -1;return 0}
+function calcZhiBonus(monthZhi,baziZhiList){let bonus=0;baziZhiList.forEach(z=>{if(LIU_HE[monthZhi]===z)bonus++;if(LIU_CHONG[monthZhi]===z)bonus--});return Math.max(-1,Math.min(1,bonus))}
+function scoreToStar(raw){if(raw>=3)return 5;if(raw>=1)return 4;if(raw>=0)return 3;if(raw>=-2)return 2;return 1}
+function totalToLuck(total){if(total>=12)return'大吉';if(total>=8)return'吉';if(total>=5)return'平';if(total>=3)return'凶';return'大凶'}
+function pickTemplate(arr,seed){return arr[seed%arr.length]}
+
+function genMonthFortune(year,month,baziResult){
+  const{yongShen,pillars}=baziResult,{yongWx,jiWx}=yongShen;
+  const liuNian=getLiuNianGanZhi(year),liuYue=getLiuYueGanZhi(year,month);
+  const nianGanWx=GAN_WX[liuNian.ganIdx],nianZhiWx=ZHI_WX[liuNian.zhiIdx],yueGanWx=GAN_WX[liuYue.ganIdx],yueZhiWx=ZHI_WX[liuYue.zhiIdx];
+  const baziZhiList=pillars.map(p=>p.zhi);
+  const nianScore=calcWxScore(nianGanWx,yongWx,jiWx)*0.4+calcWxScore(nianZhiWx,yongWx,jiWx)*0.3;
+  const yueScore=calcWxScore(yueGanWx,yongWx,jiWx)*0.8+calcWxScore(yueZhiWx,yongWx,jiWx)*0.7;
+  const zhiBonus=calcZhiBonus(liuYue.zhi,baziZhiList);
+  const baseScore=nianScore+yueScore+zhiBonus;
+  const seed=year*100+month;
+  const offsets=[[0.3,-0.2,0.1,-0.1],[-0.1,0.4,-0.2,0.2],[0.2,-0.1,0.3,-0.3],[-0.2,0.2,-0.1,0.4]][seed%4];
+  const careerRaw=baseScore+offsets[0],wealthRaw=baseScore+offsets[1],loveRaw=baseScore+offsets[2],healthRaw=baseScore+offsets[3];
+  const careerStar=scoreToStar(careerRaw),wealthStar=scoreToStar(wealthRaw),loveStar=scoreToStar(loveRaw),healthStar=scoreToStar(healthRaw);
+  const totalStars=careerStar+wealthStar+loveStar+healthStar,luck=totalToLuck(totalStars);
+  const careerTips={5:'事业腾飞，贵人相助',4:'事业稳步上升，有合作机会',3:'事业平稳，稳步推进',2:'工作有波折，谨慎应对',1:'职场低迷，宜守不宜攻'};
+  const wealthTips={5:'财源广进，偏财亦旺',4:'正财稳定，谨慎偏财投资',3:'收支平衡，理性消费',2:'财运偏弱，谨防破财',1:'财运低迷，严禁投机'};
+  const loveTips={5:'桃花盛开，情缘大热',4:'人缘佳，感情氛围融洽',3:'感情平稳，顺其自然',2:'感情有摩擦，需耐心',1:'感情压力大，谨慎决策'};
+  const healthTips={5:'精力充沛，健康最佳',4:'身体状态良好，注意防护',3:'注意作息，保护肠胃',2:'体力偏弱，充分休息',1:'注意健康，及时就医'};
+  const careerDetail=pickTemplate(TEMPLATES.career[careerStar],seed),wealthDetail=pickTemplate(TEMPLATES.wealth[wealthStar],seed+1),loveDetail=pickTemplate(TEMPLATES.love[loveStar],seed+2),healthDetail=pickTemplate(TEMPLATES.health[healthStar],seed+3);
+  const luckType=totalStars>=14?'help':totalStars>=10?'neutral':'harm';
+  const harmType=luckType;
+  const yiItems=[...YI_LIST[luckType]].sort(()=>(seed%3)-1).slice(0,3);
+  const jiItems=[...JI_LIST[harmType]].sort(()=>(seed%2)-0.5).slice(0,3);
+  const avgStar=Math.round(totalStars/4);
+  const remindList=REMIND_LIST[avgStar]||REMIND_LIST[3];
+  const remind=remindList[seed%remindList.length];
+  const monthDays=[31,28,31,30,31,30,31,31,30,31,30,31];if((year%4===0&&year%100!==0)||year%400===0)monthDays[1]=29;
+  const endDay=monthDays[month-1];
+  const gregorian=year+'.'+String(month).padStart(2,'0')+'.01-'+year+'.'+String(month).padStart(2,'0')+'.'+String(endDay).padStart(2,'0');
+  const yueGanZhi=liuYue.gan+liuYue.zhi;
+  return{month,gregorian,lunar:liuNian.gan+liuNian.zhi+'年'+['正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'][month-1],yueGanZhi,luck,luckClass:{'大吉':'great-good','吉':'good','平':'normal','凶':'bad','大凶':'great-bad'}[luck],careerStar,careerTip:careerTips[careerStar],careerDetail,wealthStar,wealthTip:wealthTips[wealthStar],wealthDetail,loveStar,loveTip:loveTips[loveStar],loveDetail,healthStar,healthTip:healthTips[healthStar],healthDetail,goodBad:'宜：'+yiItems.join('、')+'；忌：'+jiItems.join('、'),remind,expanded:false}
+}
+function genYearFortune(year,baziResult){const months=[];for(let m=1;m<=12;m++)months.push(genMonthFortune(year,m,baziResult));return months}
+function starsStr(n){return'★'.repeat(n)+'☆'.repeat(5-n)}
+
+/* ============================================
+   APP LOGIC
+   ============================================ */
+let currentGender = '男';
+let baziResult = null;
+let birthInfo = null;
+let fortuneYear = new Date().getFullYear();
+let cachedFortune = null;
+
+const HOUR_OPTIONS = ['子时','丑时','寅时','卯时','辰时','巳时','午时','未时','申时','酉时','戌时','亥时'];
+const HOUR_RANGES = ['23:00-01:00','01:00-03:00','03:00-05:00','05:00-07:00','07:00-09:00','09:00-11:00','11:00-13:00','13:00-15:00','15:00-17:00','17:00-19:00','19:00-21:00','21:00-23:00'];
+
+// Toast
+function showToast(msg, duration) {
+  duration = duration || 2000;
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// SPA Navigation
+function navigateTo(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  document.getElementById('app').scrollTop = 0;
+}
+
+// Gender
+function selectGender(el) {
+  document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentGender = el.dataset.gender;
+}
+
+// Populate selects
+function populateSelects() {
+  const monthSel = document.getElementById('inp-month');
+  const daySel = document.getElementById('inp-day');
+  const hourSel = document.getElementById('inp-hour');
+
+  for (let m = 1; m <= 12; m++) {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m + '月';
+    monthSel.appendChild(opt);
+  }
+
+  function updateDays() {
+    const y = parseInt(document.getElementById('inp-year').value) || 2000;
+    const m = parseInt(monthSel.value) || 1;
+    const maxD = solarDays(y, m);
+    const curD = parseInt(daySel.value);
+    daySel.innerHTML = '<option value="" disabled>选择</option>';
+    for (let d = 1; d <= maxD; d++) {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d + '日';
+      daySel.appendChild(opt);
+    }
+    if (curD && curD <= maxD) daySel.value = curD;
+  }
+
+  monthSel.addEventListener('change', updateDays);
+  document.getElementById('inp-year').addEventListener('change', updateDays);
+
+  HOUR_OPTIONS.forEach((h, i) => {
+    const opt = document.createElement('option');
+    opt.value = h;
+    opt.textContent = h + ' (' + HOUR_RANGES[i] + ')';
+    hourSel.appendChild(opt);
+  });
+}
+
+// Storage helpers
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('bazi_history') || '[]'); }
+  catch(e) { return []; }
+}
+function saveHistory(item) {
+  let list = getHistory();
+  // deduplicate
+  list = list.filter(h => h.key !== item.key);
+  list.unshift(item);
+  if (list.length > 10) list = list.slice(0, 10);
+  localStorage.setItem('bazi_history', JSON.stringify(list));
+}
+function removeHistory(key) {
+  let list = getHistory().filter(h => h.key !== key);
+  localStorage.setItem('bazi_history', JSON.stringify(list));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = getHistory();
+  const container = document.getElementById('history-list');
+  const section = document.getElementById('history-section');
+  if (list.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  container.innerHTML = list.map(h =>
+    '<div class="history-item" onclick="loadHistory(\'' + h.key + '\')">' +
+      '<div class="history-item-left">' + h.label + '</div>' +
+      '<button class="history-item-delete" onclick="event.stopPropagation();removeHistory(\'' + h.key + '\')">删除</button>' +
+    '</div>'
+  ).join('');
+}
+
+function loadHistory(key) {
+  const list = getHistory();
+  const item = list.find(h => h.key === key);
+  if (!item) return;
+  document.getElementById('inp-year').value = item.year;
+  document.getElementById('inp-month').value = item.month;
+  // trigger day update
+  document.getElementById('inp-month').dispatchEvent(new Event('change'));
+  setTimeout(() => {
+    document.getElementById('inp-day').value = item.day;
+  }, 10);
+  document.getElementById('inp-hour').value = item.hour;
+  currentGender = item.gender || '男';
+  document.querySelectorAll('.gender-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.gender === currentGender);
+  });
+  doSubmit();
+}
+
+// Submit
+function doSubmit() {
+  const y = parseInt(document.getElementById('inp-year').value);
+  const m = parseInt(document.getElementById('inp-month').value);
+  const d = parseInt(document.getElementById('inp-day').value);
+  const hour = document.getElementById('inp-hour').value;
+
+  if (!y || y < 1901 || y > 2099) { showToast('请输入有效年份（1901-2099）'); return; }
+  if (!m) { showToast('请选择月份'); return; }
+  if (!d) { showToast('请选择日期'); return; }
+  if (!hour) { showToast('请选择时辰'); return; }
+
+  // Validate day
+  const maxDay = solarDays(y, m);
+  if (d > maxDay) { showToast('该月最多' + maxDay + '天'); return; }
+
+  birthInfo = { year: y, month: m, day: d, hour: hour, gender: currentGender };
+
+  try {
+    baziResult = calcBaZi(y, m, d, hour);
+  } catch(e) {
+    showToast('排盘计算出错：' + e.message);
+    return;
+  }
+
+  // Save history
+  const lunar = solarToLunar(y, m, d);
+  const key = y + '-' + m + '-' + d + '-' + hour;
+  saveHistory({
+    key: key,
+    label: y + '年' + m + '月' + d + '日 ' + hour + ' (' + lunar.yearGanZhi + '年 ' + lunar.animal + ')',
+    year: y, month: m, day: d, hour: hour, gender: currentGender
+  });
+
+  renderBaziPage();
+  navigateTo('bazi');
+}
+
+// Render bazi page
+function renderBaziPage() {
+  const r = baziResult;
+  const bi = birthInfo;
+  const lunar = solarToLunar(bi.year, bi.month, bi.day);
+
+  document.getElementById('bazi-title').textContent =
+    r.pillars[0].ganZhi + ' ' + r.pillars[1].ganZhi + ' · ' +
+    r.pillars[2].ganZhi + '日 · ' + lunar.animal + '年';
+
+  let html = '';
+
+  // Basic info
+  html += '<div class="bazi-card">';
+  html += '<div class="bazi-card-title">基本信息</div>';
+  html += '<div class="info-row"><span class="info-label">公历</span><span class="info-value">' + bi.year + '年' + bi.month + '月' + bi.day + '日 ' + bi.hour + '</span></div>';
+  html += '<div class="info-row"><span class="info-label">农历</span><span class="info-value">' + lunar.yearGanZhi + '年 ' + lunar.lunarMonthName + lunar.lunarDayName + '</span></div>';
+  html += '<div class="info-row"><span class="info-label">生肖</span><span class="info-value gold">' + lunar.animal + '</span></div>';
+  html += '<div class="info-row"><span class="info-label">性别</span><span class="info-value">' + bi.gender + '</span></div>';
+  html += '</div>';
+
+  // Four pillars
+  const pillarNames = ['年柱', '月柱', '日柱', '时柱'];
+  html += '<div class="bazi-card clickable" onclick="showDetail(' + "'pillars'" + ')">';
+  html += '<div class="bazi-card-title">四柱八字<span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span></div>';
+  html += '<div class="pillars-grid">';
+  r.pillars.forEach((p, i) => {
+    const shen = r.shiShen[i];
+    html += '<div class="pillar">';
+    html += '<div class="pillar-label">' + pillarNames[i] + '</div>';
+    html += '<div class="pillar-gan">' + p.gan + '</div>';
+    html += '<div class="pillar-zhi">' + p.zhi + '</div>';
+    html += '<div class="pillar-shen">' + shen.ganShen + '</div>';
+    html += '<div class="pillar-wx">(' + shen.zhiWx + ')</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+
+  // Wuxing
+  html += '<div class="bazi-card clickable" onclick="showDetail(' + "'wuxing'" + ')">';
+  html += '<div class="bazi-card-title">五行分布<span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span></div>';
+  html += '<div class="wuxing-section">';
+  const wxMap = {'木':'wood','火':'fire','土':'earth','金':'metal','水':'water'};
+  const wxTotal = Object.values(r.wuXing).reduce((a, b) => a + b, 0);
+  ['木','火','土','金','水'].forEach(wx => {
+    const count = r.wuXing[wx];
+    const pct = wxTotal > 0 ? (count / wxTotal * 100) : 0;
+    html += '<div class="wx-bar-row">';
+    html += '<div class="wx-bar-label">' + wx + '</div>';
+    html += '<div class="wx-bar-track"><div class="wx-bar-fill ' + wxMap[wx] + '" style="width:' + pct + '%"></div></div>';
+    html += '<div class="wx-bar-count">' + count + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+
+  // Yong shen
+  html += '<div class="bazi-card clickable" onclick="showDetail(' + "'yongshen'" + ')">';
+  html += '<div class="bazi-card-title">用神分析<span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span></div>';
+  html += '<div class="info-row"><span class="info-label">日元</span><span class="info-value gold">' + r.dayGan + '（' + r.dayWx + '）</span></div>';
+  html += '<div class="info-row"><span class="info-label">日主强弱</span><span class="info-value ' + (r.yongShen.isStrong ? 'red' : 'green') + '">' + r.yongShen.strengthLabel + '</span></div>';
+  html += '<div class="info-row"><span class="info-label">用神</span><span class="info-value gold">' + r.yongShen.yongLabel + '</span></div>';
+  html += '<div class="info-row"><span class="info-label">忌神</span><span class="info-value red">' + r.yongShen.jiLabel + '</span></div>';
+  html += '</div>';
+
+  // Gui ren
+  html += '<div class="bazi-card clickable" onclick="showDetail(' + "'guiren'" + ')">';
+  html += '<div class="bazi-card-title">贵人星<span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span></div>';
+  r.guiRen.forEach(g => {
+    html += '<div class="guiren-item">';
+    html += '<div class="guiren-name">' + g.name + '</div>';
+    html += '<div class="guiren-desc">' + g.desc + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  document.getElementById('bazi-content').innerHTML = html;
+}
+
+// Fortune page
+function changeYear(delta) {
+  fortuneYear += delta;
+  cachedFortune = null;
+  renderFortunePage();
+}
+
+function renderFortunePage() {
+  if (!baziResult) { navigateTo('home'); return; }
+
+  document.getElementById('fortune-year-label').textContent = fortuneYear + '年';
+
+  try {
+    if (!cachedFortune) {
+      cachedFortune = genYearFortune(fortuneYear, baziResult);
+    }
+  } catch(e) {
+    console.error('[bazi] genYearFortune error:', e);
+    document.getElementById('fortune-content').innerHTML = '<div style="padding:20px;color:#e74c3c">运势计算出错: ' + e.message + '</div>';
+    return;
+  }
+
+  const months = cachedFortune;
+  
+  // DEBUG: show count
+  let html = '<div style="padding:8px 16px;color:#d4a853;font-size:0.75rem">共 ' + months.length + ' 个月运势</div>';
+
+  months.forEach((mf, idx) => {
+    html += '<div class="month-card' + (mf.expanded ? ' expanded' : '') + '" onclick="toggleMonth(this, ' + idx + ')">';
+    html += '<div class="month-card-header">';
+    html += '<div class="month-card-left">';
+    html += '<span class="month-card-month">' + mf.month + '月</span>';
+    html += '<span class="month-card-ganzhi">' + mf.lunar + ' · ' + mf.yueGanZhi + '</span>';
+    html += '</div>';
+    html += '<span class="luck-badge ' + mf.luckClass + '">' + mf.luck + '</span>';
+    html += '<span class="month-card-arrow">▶</span>';
+    html += '</div>';
+    html += '<div class="month-card-body">';
+
+    // Career
+    html += buildFortuneCat('💼', '事业运', mf.careerStar, mf.careerTip, mf.careerDetail);
+    // Wealth
+    html += buildFortuneCat('💰', '财运', mf.wealthStar, mf.wealthTip, mf.wealthDetail);
+    // Love
+    html += buildFortuneCat('❤️', '感情运', mf.loveStar, mf.loveTip, mf.loveDetail);
+    // Health
+    html += buildFortuneCat('🏥', '健康运', mf.healthStar, mf.healthTip, mf.healthDetail);
+
+    // Extra
+    html += '<div class="fortune-extra">';
+    html += '<div>' + mf.goodBad + '</div>';
+    html += '</div>';
+
+    // Remind
+    html += '<div class="fortune-remind">';
+    html += '<div class="fortune-remind-label">💡 本月提醒</div>';
+    html += '<div class="fortune-remind-text">' + mf.remind + '</div>';
+    html += '</div>';
+
+    html += '</div>';
+    html += '</div>';
+  });
+
+  document.getElementById('fortune-content').innerHTML = html;
+}
+
+function buildFortuneCat(icon, name, star, tip, detail) {
+  let h = '<div class="fortune-category">';
+  h += '<div class="fortune-cat-header">';
+  h += '<span class="fortune-cat-name"><span class="fortune-cat-icon">' + icon + '</span>' + name + '</span>';
+  h += '<span class="fortune-cat-stars">' + starsStr(star) + '</span>';
+  h += '</div>';
+  h += '<div class="fortune-cat-tip">' + tip + '</div>';
+  h += '<div class="fortune-cat-detail">' + detail + '</div>';
+  h += '</div>';
+  return h;
+}
+
+function toggleMonth(el, idx) {
+  el.classList.toggle('expanded');
+  cachedFortune[idx].expanded = el.classList.contains('expanded');
+}
+
+// Init
+function init() {
+  populateSelects();
+  renderHistory();
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+
+  // Set year and month first
+  document.getElementById('inp-year').value = year;
+  document.getElementById('inp-month').value = month;
+  // Trigger day population synchronously by calling updateDays directly
+  const daySel = document.getElementById('inp-day');
+  const maxD = solarDays(year, month);
+  daySel.innerHTML = '<option value="" disabled>选择</option>';
+  for (let d = 1; d <= maxD; d++) {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d + '日';
+    daySel.appendChild(opt);
+  }
+  daySel.value = day;
+
+  // Set hour based on current time
+  const h = now.getHours();
+  let hourIdx;
+  if (h >= 23 || h < 1) hourIdx = 0;
+  else if (h < 3) hourIdx = 1;
+  else if (h < 5) hourIdx = 2;
+  else if (h < 7) hourIdx = 3;
+  else if (h < 9) hourIdx = 4;
+  else if (h < 11) hourIdx = 5;
+  else if (h < 13) hourIdx = 6;
+  else if (h < 15) hourIdx = 7;
+  else if (h < 17) hourIdx = 8;
+  else if (h < 19) hourIdx = 9;
+  else if (h < 21) hourIdx = 10;
+  else hourIdx = 11;
+  document.getElementById('inp-hour').value = HOUR_OPTIONS[hourIdx];
+}
+
+/* ============================================
+   MODAL
+   ============================================ */
+const ZHI_CANGGAN = {
+  '子':['癸'], '丑':['己','癸','辛'], '寅':['甲','丙','戊'], '卯':['乙'],
+  '辰':['戊','乙','癸'], '巳':['丙','庚','戊'], '午':['丁','己'], '未':['己','丁','乙'],
+  '申':['庚','壬','戊'], '酉':['辛'], '戌':['戊','辛','丁'], '亥':['壬','甲']
+};
+const WX_COLORS = {'木':'#2ecc71','火':'#e74c3c','土':'#d4a853','金':'#bdc3c7','水':'#3498db'};
+
+function openModal(title, bodyHtml) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+function showDetail(type) {
+  if (!baziResult) return;
+  var r = baziResult;
+  if (type === 'pillars') showPillarsDetail(r);
+  else if (type === 'wuxing') showWuXingDetail(r);
+  else if (type === 'yongshen') showYongShenDetail(r);
+  else if (type === 'guiren') showGuiRenDetail(r);
+}
+
+function showPillarsDetail(r) {
+  var pillarLabels = ['年柱','月柱','日柱','时柱'];
+  var pillarDesc = [
+    '代表祖上、父母、童年运势，管15岁前的运程，也反映一个人的根基和背景',
+    '代表父母宫、兄弟宫，管18-35岁的青壮年运程，是命局中最重要的一柱，决定事业方向和大致成就',
+    '代表自己、配偶宫，日干为"日元"（命主本人），日支代表配偶和中年以后的内心世界',
+    '代表子女宫、晚年运，管55岁以后的人生走向，也反映一个人的归宿和最终成就'
+  ];
+  var html = '';
+  pillarLabels.forEach(function(name, i) {
+    html += '<div class="modal-section">';
+    html += '<div class="modal-section-title">' + name + '</div>';
+    html += '<div style="color:var(--text-dim);font-size:0.78rem">' + pillarDesc[i] + '</div>';
+    html += '<div style="margin-top:6px;display:flex;gap:10px">';
+    html += '<span style="color:var(--gold);font-weight:700">干：' + r.pillars[i].gan + '</span>';
+    html += '<span style="color:var(--text);font-weight:700">支：' + r.pillars[i].zhi + '</span>';
+    html += '<span style="color:var(--text-dim)">五行：' + r.shiShen[i].zhiWx + '</span>';
+    html += '</div></div>';
+  });
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">地支藏干</div>';
+  html += '<div class="modal-wuxing-grid">';
+  pillarLabels.forEach(function(name, i) {
+    var zhi = r.pillars[i].zhi;
+    var cang = ZHI_CANGGAN[zhi] || [];
+    html += '<div class="modal-wx-item">';
+    html += '<div class="modal-wx-name">' + zhi + '</div>';
+    html += '<div style="font-size:0.72rem;color:var(--text-dim);margin-top:2px">藏干：' + cang.join('·') + '</div>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">十神关系（日干对各柱天干）</div>';
+  html += '<table class="modal-pillars-table"><thead><tr><th>柱</th><th>天干</th><th>五行</th><th>十神</th></tr></thead><tbody>';
+  var dayGan = r.pillars[2].gan;
+  var dayGanIdx = GAN.indexOf(dayGan);
+  pillarLabels.forEach(function(name, i) {
+    var gan = r.pillars[i].gan;
+    var ganIdx = GAN.indexOf(gan);
+    var wx = GAN_WX[ganIdx];
+    var shen = i === 2 ? '日元' : SHEN_MAP[dayGanIdx][ganIdx];
+    html += '<tr><td>' + name + '</td><td style="color:var(--gold)">' + gan + '</td><td>' + wx + '</td><td style="color:' + (i===2?'var(--gold)':'var(--text)') + ';font-weight:600">' + shen + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  openModal('四柱详解', html);
+}
+
+function showWuXingDetail(r) {
+  var shengOrder = ['木','火','土','金','水'];
+  var wxMeanings = {'木':'生长、仁慈','火':'热情、礼仪','土':'稳重、诚信','金':'坚毅、义气','水':'智慧、灵活'};
+  var shengMap = {'木':'火','火':'土','土':'金','金':'水','水':'木'};
+  var keMap = {'木':'土','火':'金','土':'水','金':'木','水':'火'};
+  var supplementAdvice = {
+    '木':'多穿绿色衣物，多吃绿色蔬菜，养花草，春季多户外活动',
+    '火':'多晒太阳，穿着红色系，保持运动热情，多出入南方场所',
+    '土':'多吃黄色食物如小米、南瓜，住宅朝南，装修多用土黄色',
+    '金':'多戴金属饰品，白色、银色系服装，多去西方，多接触金属器物',
+    '水':'多喝水，黑色、深蓝色系服装，多去北方，多接触水相关活动'
+  };
+  var avoidAdvice = {
+    '木':'少穿白色、金色；少去西方',
+    '火':'少穿黑色、蓝色；少去北方；少做高风险投机',
+    '土':'少穿绿色；少去东方；饮食忌过油腻',
+    '金':'少穿红色、紫色；少去南方；少冲动表达',
+    '水':'少穿黄色；少去中央方位；忌过度懒散'
+  };
+  var total = Object.values(r.wuXing).reduce(function(a,b){return a+b;},0);
+  var sorted = shengOrder.slice().sort(function(a,b){return r.wuXing[b]-r.wuXing[a];});
+  var maxWx = sorted[0], minWx = sorted[4];
+  var html = '';
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">五行含义</div>';
+  shengOrder.forEach(function(wx){
+    html += '<div class="modal-ys-row"><span style="width:20px;color:' + WX_COLORS[wx] + ';font-weight:700">' + wx + '</span><span class="modal-ys-value">' + wxMeanings[wx] + '</span></div>';
+  });
+  html += '</div>';
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">当前命局五行统计</div>';
+  html += '<div class="modal-wuxing-grid">';
+  shengOrder.forEach(function(wx){
+    var count = r.wuXing[wx];
+    var pct = total > 0 ? Math.round(count/total*100) : 0;
+    html += '<div class="modal-wx-item"><div class="modal-wx-name" style="color:' + WX_COLORS[wx] + '">' + wx + '</div><div class="modal-wx-count">' + count + '个</div><div class="modal-wx-pct">' + pct + '%</div></div>';
+  });
+  html += '</div></div>';
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">五行相生相克</div>';
+  html += '<div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">相生：木生火→火生土→土生金→金生水→水生木</div>';
+  html += '<div style="font-size:0.78rem;color:var(--text-dim)">相克：木克土→土克水→水克火→火克金→金克木</div>';
+  html += '</div>';
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">强弱分析</div>';
+  html += '<div class="modal-yongshen-box">';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">最旺</span><span class="modal-ys-value modal-strong">' + maxWx + ' (' + r.wuXing[maxWx] + '个)</span></div>';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">最缺</span><span class="modal-ys-value modal-weak">' + minWx + ' (' + r.wuXing[minWx] + '个)</span></div>';
+  var diff = r.wuXing[maxWx] - r.wuXing[minWx];
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">均衡度</span><span class="modal-ys-value">' + (diff<=1?'均衡':diff<=3?'轻微偏颇':'明显失衡') + '</span></div>';
+  html += '</div></div>';
+  html += '<div class="modal-tip-box">';
+  html += '<div class="modal-tip-label">✦ 五行调补建议（补 ' + minWx + '）</div>';
+  html += '<div class="modal-tip-text">' + (supplementAdvice[minWx]||'') + '</div>';
+  html += '<div class="modal-tip-label" style="margin-top:6px">✦ 应避免（' + minWx + '之克）</div>';
+  html += '<div class="modal-tip-text">' + (avoidAdvice[minWx]||'') + '</div>';
+  html += '</div>';
+  openModal('五行详解', html);
+}
+
+function showYongShenDetail(r) {
+  var dayWx = r.dayWx;
+  var dayGan = r.dayGan;
+  var isStrong = r.yongShen.isStrong;
+  var yongWx = r.yongShen.yongWx || [];
+  var jiWx = r.yongShen.jiWx || [];
+  var yongshenAdvice = {
+    '木':'穿绿色、青色系；多去东方或东南方；数字3、8；适合文化、教育、木材、医疗类行业',
+    '火':'穿红色、紫色系；多去南方；数字2、7；适合电力、光电、能源、餐饮、服务类行业',
+    '土':'穿黄色、棕色系；多去南方或中央；数字5、0；适合房地产、农业、建筑、矿产类行业',
+    '金':'穿白色、银色系；多去西方；数字4、9；适合金融、法律、金属加工、制造业',
+    '水':'穿黑色、深蓝色系；多去北方；数字1、6；适合贸易、物流、科技、水产、旅游类行业'
+  };
+  var avoidAdvice = {
+    '木':'少穿白色、金色；忌西行；忌金属利器；忌从事硬性行业',
+    '火':'少穿黑色、蓝色；忌北行；忌高风险投机；忌深夜不眠',
+    '土':'少穿绿色；忌东行；忌过度变动；忌频繁跳槽',
+    '金':'少穿红色、紫色；忌南行；忌冲动决策；忌冒险行事',
+    '水':'少穿黄色；忌中央方位；忌固执己见；忌饮食过度油腻'
+  };
+  var html = '';
+  html += '<div class="modal-section"><div class="modal-section-title">什么是用神？</div><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.8">用神是八字中最需要的五行能量，是平衡命局的关键。当命局五行偏枯时，用神起到扶抑日元、调和命局的作用。用神一旦确定，则该五行所代表的颜色、方位、数字、职业等均对命主有利，能增强运势。</div></div>';
+  html += '<div class="modal-section"><div class="modal-section-title">什么是忌神？</div><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.8">忌神是八字中需要避免的五行能量，它会加重命局失衡，是命中的"短板"所在。与忌神对应的颜色、方位、职业等在生活中应尽量规避，以免运势受阻。</div></div>';
+  html += '<div class="modal-section"><div class="modal-section-title">当前命局分析</div><div class="modal-yongshen-box">';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">日元</span><span class="modal-ys-value modal-gold-text">' + dayGan + '（' + dayWx + '）</span></div>';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">日主强弱</span><span class="modal-ys-value ' + (isStrong?'modal-strong':'modal-weak') + '">' + r.yongShen.strengthLabel + '</span></div>';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">判断依据</span><span class="modal-ys-value" style="font-size:0.78rem">月令帮扶、地支有根、天干有助，综合评分' + r.yongShen.strength + '</span></div>';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">喜用神</span><span class="modal-ys-value modal-gold-text">' + yongWx.join('、') + '</span></div>';
+  html += '<div class="modal-ys-row"><span class="modal-ys-label">忌神</span><span class="modal-ys-value modal-strong">' + jiWx.join('、') + '</span></div>';
+  html += '</div></div>';
+  if (yongWx.length > 0) {
+    html += '<div class="modal-tip-box">';
+    html += '<div class="modal-tip-label">✦ 喜用神增强建议（' + yongWx.join('、') + '）</div>';
+    yongWx.forEach(function(wx){ html += '<div class="modal-tip-text">' + (yongshenAdvice[wx]||'') + '</div>'; });
+    html += '</div>';
+  }
+  if (jiWx.length > 0) {
+    html += '<div class="modal-tip-box" style="border-left-color:#e74c3c">';
+    html += '<div class="modal-tip-label" style="color:#e74c3c">✦ 忌神规避建议（' + jiWx.join('、') + '）</div>';
+    jiWx.forEach(function(wx){ html += '<div class="modal-tip-text">' + (avoidAdvice[wx]||'') + '</div>'; });
+    html += '</div>';
+  }
+  openModal('用神详解', html);
+}
+
+function showGuiRenDetail(r) {
+  var html = '';
+  html += '<div class="modal-section"><div class="modal-section-title">什么是贵人星？</div><div style="font-size:0.78rem;color:var(--text-dim);line-height:1.8">贵人星是命中自带的有利因素，代表在你遇到困难时能获得帮助的人。贵人临命，做事往往逢凶化吉、遇难呈祥。贵人多者，人际缘分深厚，仕途、事业、生活中常有贵人相助。</div></div>';
+  var types = [
+    {name:'天乙贵人', desc:'最尊贵的贵人星，逢凶化吉，遇难呈祥。口诀：甲戊见牛羊，乙己鼠猴乡，丙丁猪鸡位，壬癸兔蛇藏，庚辛逢虎马。', present: r.guiRen.some(function(g){return g.name==='天乙贵人';})},
+    {name:'天德贵人', desc:'德高望重的贵人，一生少灾祸，逢凶化吉。命带天德者，为人厚道有德，人际缘分佳。', present: r.guiRen.some(function(g){return g.name==='天德贵人';})},
+    {name:'月德贵人', desc:'月份对应的贵人，处世逢贵，有贵人相助。性格温和，人缘较好，生活中常得长辈或上级扶持。', present: r.guiRen.some(function(g){return g.name==='月德贵人';})},
+    {name:'太极贵人', desc:'土命人特有，智慧出众，悟性高，有哲学思辨天赋。命带太极贵人者，往往聪明好学，有独特见解。', present: r.guiRen.some(function(g){return g.name==='太极贵人';})}
+  ];
+  types.forEach(function(t){
+    html += '<div class="modal-guiren-item"' + (t.present?' style="border-left:3px solid var(--gold);"':'') + '>';
+    html += '<div class="modal-guiren-name">' + t.name + (t.present?' ✓':'（命局未现）') + '</div>';
+    html += '<div class="modal-guiren-desc">' + t.desc + '</div></div>';
+  });
+  html += '<div class="modal-tip-box">';
+  html += '<div class="modal-tip-label">✦ 如何招贵人</div>';
+  html += '<div class="modal-tip-text">1. 积德行善：多做好事，积累阴德，贵人自然靠近<br>2. 广结善缘：主动帮助他人，建立良好人际关系<br>3. 保持谦逊：骄傲自满者贵人远离，谦和有礼者贵人自来<br>4. 自我提升：不断提升学识能力，吸引同频贵人来往<br>5. 知恩图报：受助于人时铭记在心，适时回馈，贵人运持续</div>';
+  html += '</div>';
+  html += '<div class="modal-section">';
+  html += '<div class="modal-section-title">当前命局贵人汇总</div>';
+  if (r.guiRen && r.guiRen.length > 0 && r.guiRen[0].name !== '无特定贵人') {
+    r.guiRen.forEach(function(g){
+      html += '<div class="modal-guiren-item"><div class="modal-guiren-name">' + g.name + '</div><div class="modal-guiren-desc">' + g.desc + '</div></div>';
+    });
+  } else {
+    html += '<div style="font-size:0.78rem;color:var(--text-dim);padding:8px 0">贵人多积累于后天。积德行善、广结善缘，后天亦可修来贵人相助。</div>';
+  }
+  html += '</div>';
+  openModal('贵人详解', html);
+}
+
+// Init on DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>
